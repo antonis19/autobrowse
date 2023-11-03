@@ -1,0 +1,17 @@
+{
+  "name": "rpa-gpt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "rpa.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "openai-gpt-token-counter": "^1.1.0",
+    "puppeteer": "^21.2.1",
+    "vm2": "^3.9.19"
+  }
+}

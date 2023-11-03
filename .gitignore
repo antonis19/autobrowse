@@ -1,0 +1,15 @@
+node_modules
+.DS_Store
+.env
+.cache/*
+.vscode/*
+.ipynb_checkpoints/*
+package-lock.json
+node_modules/*
+py39/*
+venv/*
+vectorstore/*
+__pycache__/*
+html/*
+dom/*
+OAI_CONFIG_LIST
