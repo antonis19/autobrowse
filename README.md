@@ -10,6 +10,10 @@ Some examples of tasks you can give it:
 
 - Go to Craigslist and search for Nintendo DS. Click on the first result.
 
+## Demo
+
+https://drive.google.com/file/d/1Ind9z3mjHKTS-Q0vJl2FaHcPLrZtdEX0/view
+
 ## How to run
 
 1. Create a Python 3.9 environment
