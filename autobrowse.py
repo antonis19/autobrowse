@@ -210,6 +210,33 @@ class AutoBrowse:
         else :
             return message
 
+    def extract_code_execution_result(self, agent_name: str):
+        messages = self.code_generator_user_proxy.chat_messages.get(agent_name, [])
+        if not messages and agent_name == self.code_generator.name:
+            messages = self.code_generator_user_proxy.chat_messages.get(self.code_generator, [])
+
+        code_messages = [m for m in messages if self._is_code_message(m)]
+        error_messages = [m for m in messages if self._is_error_message(m)]
+
+        if not code_messages:
+            raise ValueError("No code messages found in conversation")
+
+        return {
+            "code": code_messages[-1]["content"],
+            "error": error_messages[-1]["content"] if error_messages else None,
+        }
+
+    def _is_code_message(self, message) -> bool:
+        content = str(message.get("content", ""))
+        return "```" in content and "function_call" not in str(message)
+
+    def _is_error_message(self, message) -> bool:
+        content = str(message.get("content", ""))
+        return message.get("role") == "assistant" and any(
+            keyword in content.lower()
+            for keyword in ["error", "failed", "exception", "not_clickable"]
+        )
+
     def ask_code_generator(self, message: str, context_html = "") -> str:
         """
         function to ask code_generator a question.
@@ -219,19 +246,26 @@ class AutoBrowse:
             context_html (str): the relevant HTML for code_generator to complete the task
         """
         self.code_generator_user_proxy.initiate_chat(self.code_generator, message=self.augment_message_to_code_gen(message, context_html))
-        #  -2 is the execution result,
-        #  -3 is the last message with a code block
-        last_code_block_message =  self.code_generator_user_proxy.chat_messages[self.code_generator][-3]["content"]
-        # get code blocks from last_code_block_message
-        code_blocks = get_code_blocks(last_code_block_message)
-        code_blocks_str = "\n".join(code_blocks)
+
+        try:
+            execution_result = self.extract_code_execution_result(self.code_generator.name)
+            code_blocks = get_code_blocks(execution_result["code"])
+            code_blocks_str = "\n".join(code_blocks)
+            last_error_message = execution_result["error"]
+        except ValueError:
+            last_message = self.code_generator_user_proxy.last_message()
+            last_content = str(last_message.get("content", "")) if isinstance(last_message, dict) else ""
+            code_blocks = get_code_blocks(last_content)
+            code_blocks_str = "\n".join(code_blocks)
+            last_error_message = None
 
         if is_termination_message_for_code_generator(self.code_generator_user_proxy.last_message()):
             # add code blocks to code_executed_so_far
             self.code_executed_so_far.extend(code_blocks)
             return f''' Code execution successful. The following code was executed:\n{code_blocks_str}'''
         else:
-            last_error_message = self.code_generator_user_proxy.chat_messages[self.code_generator][-2]["content"]
+            if last_error_message is None:
+                last_error_message = "No error message captured."
             return f"Code execution failed. Code execution:\n{code_blocks_str}\nError message:\n{last_error_message}"
 
 
