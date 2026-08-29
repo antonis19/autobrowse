@@ -12,7 +12,9 @@ from token_count import num_tokens_from_string
 
 import websockets
 
-CHUNK_SIZE = 15_000 # use a chunk size of 15_000 tokens so that it comfortably fits in the OpenAI API limit of 16_000 tokens
+from config import load_html_processing_config, load_websocket_config
+
+CHUNK_SIZE = load_html_processing_config().chunk_size
 
 def get_html_chunks(html: str):
     text_splitter = CharacterTextSplitter(
@@ -59,7 +61,7 @@ class RetrieveHTMLProxyAgent(autogen.ConversableAgent):
         default_auto_reply: Optional[Union[str, Dict, None]] = "",
         llm_config: Optional[Union[Dict, bool]] = False,
         system_message: Optional[str] = "",
-        browser_console_uri: Optional[str] = "ws://localhost:3000",
+        browser_console_uri: Optional[str] = None,
     ):
         super().__init__(
             name=name,
@@ -72,7 +74,7 @@ class RetrieveHTMLProxyAgent(autogen.ConversableAgent):
             llm_config=llm_config,
             system_message=system_message,
         )
-        self.browser_console_uri = browser_console_uri
+        self.browser_console_uri = browser_console_uri or load_websocket_config().uri
         self.connect_websocket()
         self.html = ""
         self.vectorstore = None

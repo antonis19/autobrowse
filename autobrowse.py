@@ -8,6 +8,7 @@ from autogen.code_utils import extract_code
 from browser_proxy_agent import BrowserProxyAgent
 from retrieve_html_proxy_agent import RetrieveHTMLProxyAgent
 import agent_config
+from config import load_config_from_env, load_websocket_config
 
 
 
@@ -37,20 +38,45 @@ def is_termination_message_for_planner(message):
 
 class AutoBrowse:
     
-    def __init__(self, config: Dict[str, Any], browser_console_uri: str = "ws://localhost:3000"):
+    def __init__(self, config: Dict[str, Any] = None, browser_console_uri: str = None):
+        if config is None:
+            env_config = load_config_from_env()
+            config = {
+                "html_assistant": {
+                    "model": env_config.html_assistant_model,
+                    "system_message": agent_config.config["html_assistant"]["system_message"],
+                },
+                "code_generator": {
+                    "model": env_config.code_generator_model,
+                    "system_message": agent_config.config["code_generator"]["system_message"],
+                },
+                "code_generator_user_proxy": {
+                    "max_consecutive_auto_reply": agent_config.config["code_generator_user_proxy"].get("max_consecutive_auto_reply", 1),
+                },
+                "planner": {
+                    "model": env_config.planner_model,
+                    "system_message": agent_config.config["planner"]["system_message"],
+                },
+                "planner_user_proxy": {
+                    "max_consecutive_auto_reply": agent_config.config["planner_user_proxy"].get("max_consecutive_auto_reply", 35),
+                },
+            }
+
         # global variable tracking code blocks executed thus far
         self.code_executed_so_far = []
         # browser console uri to send puppeteer.js code to and fetch HTML from
-        self.browser_console_uri = browser_console_uri
+        self.browser_console_uri = browser_console_uri or load_websocket_config().uri
         # initialize agents
         self.init_html_assistant(config["html_assistant"].get("model"), config["html_assistant"].get("system_message"))
-        self.init_code_generator(config["code_generator"].get("model"), config["code_generator"].get("system_message"), config["code_generator_user_proxy"].get("max_consecutive_auto_reply", 0), browser_console_uri= self.browser_console_uri)
+        self.init_code_generator(config["code_generator"].get("model"), config["code_generator"].get("system_message"), config["code_generator_user_proxy"].get("max_consecutive_auto_reply", 0), browser_console_uri=self.browser_console_uri)
         self.init_planner(config["planner"].get("model"), config["planner"].get("system_message"), config["planner_user_proxy"].get("max_consecutive_auto_reply", 0))
 
-    def init_planner(self, model_name = "gpt-4", system_message = "", max_consecutive_auto_reply = 0):
+    def init_planner(self, model_name = None, system_message = "", max_consecutive_auto_reply = 0):
         '''
         Initialize the planner agent, which generates a plan to fulfill a web browsing task.
         '''
+        if model_name is None:
+            model_name = load_config_from_env().planner_model
         ################## PLANNER ##############
         config_list_planner = autogen.config_list_from_json(
             "OAI_CONFIG_LIST",
@@ -122,7 +148,9 @@ class AutoBrowse:
             },
         )
 
-    def init_html_assistant(self, model_name = "gpt-3.5-turbo-16k", system_message = ""):
+    def init_html_assistant(self, model_name = None, system_message = ""):
+        if model_name is None:
+            model_name = load_config_from_env().html_assistant_model
         llm_config_list = autogen.config_list_from_json(
             "OAI_CONFIG_LIST",
             file_location=".",
@@ -146,7 +174,11 @@ class AutoBrowse:
             max_consecutive_auto_reply=0,
         )
 
-    def init_code_generator(self, model_name = "gpt-4", system_message = "", max_consecutive_auto_reply = 3, browser_console_uri = "ws://localhost:3000"):
+    def init_code_generator(self, model_name = None, system_message = "", max_consecutive_auto_reply = 3, browser_console_uri = None):
+        if model_name is None:
+            model_name = load_config_from_env().code_generator_model
+        if browser_console_uri is None:
+            browser_console_uri = load_websocket_config().uri
         llm_config_list = autogen.config_list_from_json(
             "OAI_CONFIG_LIST",
             file_location=".",
