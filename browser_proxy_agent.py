@@ -10,6 +10,8 @@ import websockets
 
 from autogen.code_utils import infer_lang
 
+from config import load_websocket_config
+
 class BrowserProxyAgent(autogen.ConversableAgent):
     '''
     A class that extends ConversableAgent to execute puppeteer.js code in the browser.
@@ -26,7 +28,7 @@ class BrowserProxyAgent(autogen.ConversableAgent):
         default_auto_reply: Optional[Union[str, Dict, None]] = "",
         llm_config: Optional[Union[Dict, bool]] = False,
         system_message: Optional[str] = "",
-        browser_console_uri: Optional[str] = "ws://localhost:3000",
+        browser_console_uri: Optional[str] = None,
     ):
         super().__init__(
             name=name,
@@ -39,7 +41,7 @@ class BrowserProxyAgent(autogen.ConversableAgent):
             llm_config=llm_config,
             system_message=system_message,
         )
-        self.browser_console_uri = browser_console_uri
+        self.browser_console_uri = browser_console_uri or load_websocket_config().uri
         self.connect_websocket()
 
     def connect_websocket(self):
